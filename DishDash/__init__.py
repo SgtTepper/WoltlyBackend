@@ -1,24 +1,51 @@
 import logging
-
+import sqlalchemy as db
 import azure.functions as func
+import json
+
+term_keys = ["index", "city", "title", "name", "description", "price", "image", "url"]
+stat_keys = ["city", "average"]
+engine = db.create_engine("sqlite:///DishDash/items.db")
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
+    logging.info("Python HTTP trigger function processed a request.")
 
-    name = req.params.get('name')
-    if not name:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            name = req_body.get('name')
+    term = req.params.get("term")
+    city = req.params.get("city")
+    search_description = req.params.get("searchdesc", "").lower() == "true"
 
-    if name:
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
-    else:
-        return func.HttpResponse(
-             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
-             status_code=200
+    stat_clause = engine.execute(
+        f"SELECT city, avg(price) FROM items WHERE name LIKE ? GROUP BY city",
+        ("%" + term + "%",),
+    )
+
+    term_clause = engine.execute(
+        f"SELECT * FROM items WHERE name LIKE ? AND city = ? LIMIT 500",
+        ("%" + term + "%", city),
+    )
+
+    if search_description:
+        term_clause = engine.execute(
+            f"SELECT * FROM items WHERE (name LIKE ? OR description LIKE ?) AND city = ? LIMIT 500",
+            ("%" + term + "%", "%" + term + "%", city),
         )
+
+        stat_clause = engine.execute(
+            f"SELECT city, avg(price) FROM items WHERE name LIKE ? GROUP BY city",
+            (
+                "%" + term + "%",
+                "%" + term + "%",
+            ),
+        )
+
+    return func.HttpResponse(
+        json.dumps(
+            {
+                "stats": [dict(zip(stat_keys, row)) for row in stat_clause.fetchall()],
+                "data": [dict(zip(term_keys, row)) for row in term_clause.fetchall()],
+            }
+        ),
+        status_code=200,
+        mimetype="application/json",
+    )
