@@ -5,8 +5,7 @@ import json
 
 term_keys = ["index", "city", "title", "name", "description", "price", "image", "url"]
 stat_keys = ["city", "min", "average", "max", "count"]
-engine = db.create_engine("sqlite:///DishDash/items.db")
-
+engine = db.create_engine("sqlite:///items.db")
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("Python HTTP trigger function processed a request.")
@@ -32,7 +31,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
 
         stat_clause = engine.execute(
-            f"SELECT city, min(price), avg(price), max(price), count(price) FROM items WHERE name LIKE ? GROUP BY city",
+            f"SELECT city, min(price), avg(price), max(price), count(price) FROM items WHERE name LIKE ? OR description LIKE ? GROUP BY city",
             (
                 "%" + term + "%",
                 "%" + term + "%",
