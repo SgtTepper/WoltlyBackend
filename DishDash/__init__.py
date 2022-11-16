@@ -3,7 +3,7 @@ import sqlalchemy as db
 import azure.functions as func
 import json
 
-term_keys = ["index", "city", "title", "name", "description", "price", "image", "url"]
+term_keys = ["id", "index", "city", "title", "name", "description", "price", "image", "url"]
 stat_keys = ["city", "min", "average", "max", "count"]
 engine = db.create_engine("sqlite:///items.db")
 
